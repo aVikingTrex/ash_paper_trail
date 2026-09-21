@@ -22,6 +22,19 @@ defmodule AshPaperTrail.Resource.Transformers.CreateVersionResource do
     store_action_inputs? = AshPaperTrail.Resource.Info.store_action_inputs?(dsl_state)
     store_resource_identifier? = AshPaperTrail.Resource.Info.store_resource_identifier?(dsl_state)
     version_extensions = AshPaperTrail.Resource.Info.version_extensions(dsl_state)
+    apply_can_read_policy? = AshPaperTrail.Resource.Info.apply_can_read_policy?(dsl_state)
+
+    version_extensions =
+      if apply_can_read_policy? do
+        authorizers =
+          version_extensions
+          |> Keyword.get(:authorizers, [])
+          |> then(&Enum.uniq([Ash.Policy.Authorizer | &1]))
+
+        Keyword.put(version_extensions, :authorizers, authorizers)
+      else
+        version_extensions
+      end
 
     public_timestamps? =
       AshPaperTrail.Resource.Info.public_timestamps?(dsl_state)
@@ -321,6 +334,24 @@ defmodule AshPaperTrail.Resource.Transformers.CreateVersionResource do
             create: unquote(accept),
             update: unquote(accept)
           ])
+        end
+
+        if unquote(apply_can_read_policy?) do
+          Code.eval_quoted(
+            quote do
+              policies do
+                bypass context_equals(:ash_paper_trail?, true) do
+                  authorize_if always()
+                end
+
+                policy action_type(:read) do
+                  authorize_if can_read(:version_source)
+                end
+              end
+            end,
+            [],
+            __ENV__
+          )
         end
 
         relationships do
