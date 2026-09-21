@@ -108,6 +108,7 @@ defmodule AshPaperTrail.MixProject do
   defp deps do
     [
       {:ash, ash_version("~> 3.5 and >= 3.5.43")},
+      {:simple_sat, "~> 0.1", only: [:dev, :test]},
       {:igniter, "~> 0.5", only: [:dev, :test]},
       {:ex_doc, "~> 0.37-rc", only: [:dev, :test], runtime: false},
       {:ex_check, "~> 0.12", only: [:dev, :test]},

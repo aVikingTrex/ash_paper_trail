@@ -75,6 +75,7 @@ defmodule AshPaperTrail.Resource.Transformers.CreateVersionResourceTest do
 
     paper_trail do
       apply_can_read_policy? true
+      version_extensions authorizers: [Ash.Policy.Authorizer]
     end
 
     actions do
@@ -133,6 +134,38 @@ defmodule AshPaperTrail.Resource.Transformers.CreateVersionResourceTest do
              |> Enum.any?(&(&1 == Ash.Policy.Authorizer))
     end
 
+    test "adds one policy authorizer and source read policies" do
+      version = TagWithCanReadPolicy.Version
+
+      assert Ash.Resource.Info.authorizers(version)
+             |> Enum.count(&(&1 == Ash.Policy.Authorizer)) == 1
+
+      policies = Ash.Policy.Info.policies(version)
+
+      assert Enum.any?(policies, fn policy ->
+               policy.bypass? == true and
+                 Enum.any?(policy.condition, fn
+                   {Ash.Policy.Check.ContextEquals, opts} ->
+                     opts[:key] == :ash_paper_trail? and opts[:value] == true
+
+                   _ ->
+                     false
+                 end)
+             end)
+
+      assert Enum.any?(policies, fn policy ->
+               Enum.any?(policy.policies, fn
+                 %Ash.Policy.Check{
+                   check_module: Ash.Policy.Check.CanRead,
+                   check_opts: opts
+                 } ->
+                   opts[:relationship_path] == [:version_source]
+
+                 _ ->
+                   false
+               end)
+             end)
+    end
   end
 
   describe "attribute :version_source_id" do
