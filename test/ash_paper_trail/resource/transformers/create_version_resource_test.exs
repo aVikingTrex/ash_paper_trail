@@ -62,6 +62,35 @@ defmodule AshPaperTrail.Resource.Transformers.CreateVersionResourceTest do
     end
   end
 
+  defmodule TagWithCanReadPolicy do
+    use Ash.Resource,
+      domain: AshPaperTrail.Resource.Transformers.CreateVersionResourceTest.Domain,
+      data_layer: Ash.DataLayer.Ets,
+      extensions: [AshPaperTrail.Resource],
+      validate_domain_inclusion?: false
+
+    ets do
+      private? true
+    end
+
+    paper_trail do
+      apply_can_read_policy? true
+    end
+
+    actions do
+      default_accept :*
+      defaults [:create, :update, :destroy, :read]
+    end
+
+    attributes do
+      attribute :name, :string do
+        public? true
+        allow_nil? false
+        primary_key? true
+      end
+    end
+  end
+
   defmodule Domain do
     use Ash.Domain, extensions: [AshPaperTrail.Domain], validate_config_inclusion?: false
 
@@ -70,6 +99,8 @@ defmodule AshPaperTrail.Resource.Transformers.CreateVersionResourceTest do
       resource Tag.Version
       resource TagWithCustomVersion
       resource AshPaperTrail.Resource.Transformers.CreateVersionResourceTest.TagPaperTrailVersion
+      resource TagWithCanReadPolicy
+      resource TagWithCanReadPolicy.Version
     end
   end
 
@@ -92,6 +123,16 @@ defmodule AshPaperTrail.Resource.Transformers.CreateVersionResourceTest do
 
       assert AshPaperTrail.allow_resource_versions(nil, version_module)
     end
+  end
+
+  describe "apply_can_read_policy? option" do
+    test "defaults to false and does not add an authorizer" do
+      refute AshPaperTrail.Resource.Info.apply_can_read_policy?(Tag)
+
+      refute Ash.Resource.Info.authorizers(Tag.Version)
+             |> Enum.any?(&(&1 == Ash.Policy.Authorizer))
+    end
+
   end
 
   describe "attribute :version_source_id" do
