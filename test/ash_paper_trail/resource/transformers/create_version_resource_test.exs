@@ -172,15 +172,20 @@ defmodule AshPaperTrail.Resource.Transformers.CreateVersionResourceTest do
 
       version = TagWithCanReadPolicy.Version |> Ash.read!(authorize?: false) |> List.first()
 
-      assert_raise Ash.Error.Forbidden, fn ->
-        Ash.update!(version, %{changes: %{updated: true}}, authorize?: true)
-      end
-
       assert %{changes: %{updated: true}} =
                Ash.update!(version, %{changes: %{updated: true}},
                  authorize?: true,
                  context: %{ash_paper_trail?: true}
                )
+    end
+
+    test "does not change authorization behavior for existing version updates" do
+      Ash.create!(TagWithCanReadPolicy, %{name: "another tag"})
+
+      version = TagWithCanReadPolicy.Version |> Ash.read!(authorize?: false) |> List.last()
+
+      assert %{changes: %{updated: true}} =
+               Ash.update!(version, %{changes: %{updated: true}}, authorize?: true)
     end
   end
 

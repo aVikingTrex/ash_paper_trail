@@ -347,6 +347,10 @@ defmodule AshPaperTrail.Resource.Transformers.CreateVersionResource do
                 policy action_type(:read) do
                   authorize_if can_read(:version_source)
                 end
+
+                policy action_type(:update) do
+                  authorize_if always()
+                end
               end
             end,
             [],
